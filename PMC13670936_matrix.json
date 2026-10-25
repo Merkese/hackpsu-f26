@@ -1,0 +1,38 @@
+{
+  "pmcid": "PMC13670936",
+  "title": "resiLIR HCP: A self-guided digital resilience intervention for healthcare professionals focusing on self-care and self-compassion \u2013 A randomized controlled trial",
+  "abstract_extraction": {
+    "paper_type": "empirical",
+    "sample_size_enrolled": 234,
+    "sample_size_analyzed": null,
+    "design": "randomized controlled trial",
+    "primary_outcome": "resilience operationalized as time-varying stressor reactivity",
+    "direction": "no difference",
+    "direction_summary": "No difference in resilience (stressor reactivity) in ITT analyses, although per-protocol analyses showed significant effects at post-intervention.",
+    "evidence": "ITT analyses did not reveal any significant effects, neither for the primary outcome nor secondary outcomes after adjusting for multiple testing."
+  },
+  "body_extraction": {
+    "paper_type": "empirical",
+    "sample_size_enrolled": 234,
+    "sample_size_analyzed": 234,
+    "design": "randomized controlled trial",
+    "primary_outcome": "stressor reactivity (SR) score",
+    "direction": "no difference",
+    "direction_summary": "No difference in resilience (stressor reactivity score) between the intervention and control groups in ITT analysis, although it improved in per-protocol analysis.",
+    "evidence": "the corresponding ITT analysis did not indicate a significant overall group \u00d7 time interaction (b = \u22120.10, 95% CI [\u22120.28, 0.08], p = .261)"
+  },
+  "checks": {
+    "paper_type": {
+      "status": "pass",
+      "detail": "abstract says empirical, body says empirical"
+    },
+    "direction_agreement": {
+      "status": "pass",
+      "detail": "abstract: no difference | results: no difference"
+    },
+    "sample_size_consistency": {
+      "status": "pass",
+      "detail": "abstract N [234] | methods/results enrolled 234, analyzed 234"
+    }
+  }
+}

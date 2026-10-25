@@ -1,0 +1,38 @@
+{
+  "pmcid": "PMC13641949",
+  "title": "Effects of one night of sleep deprivation on single- and dual-task gait",
+  "abstract_extraction": {
+    "paper_type": "empirical",
+    "sample_size_enrolled": 18,
+    "sample_size_analyzed": 18,
+    "design": "within-subject crossover trial",
+    "primary_outcome": "gait changes (spatio-temporal parameters, foot placement error, and mediolateral margin of stability)",
+    "direction": "declined",
+    "direction_summary": "Declined: sleep deprivation altered gait parameters and decreased mediolateral margin of stability, indicating impaired walking stability/control.",
+    "evidence": "Additionally, mean MoS ML decreased only in SDEP ( p = 0.025)."
+  },
+  "body_extraction": {
+    "paper_type": "empirical",
+    "sample_size_enrolled": 22,
+    "sample_size_analyzed": 18,
+    "design": "randomized crossover trial",
+    "primary_outcome": "biomechanical gait parameters (spatio-temporal parameters, foot placement control, and mediolateral margins of stability)",
+    "direction": "mixed",
+    "direction_summary": "Mixed gait changes following sleep deprivation: step time and step length increased, mediolateral stability decreased, and foot placement error AP decreased, while other parameters showed no effect.",
+    "evidence": "SDEP and DT uniquely affected ML and AP foot placement control... SDEP led to a decrease in mean MoS ML"
+  },
+  "checks": {
+    "paper_type": {
+      "status": "pass",
+      "detail": "abstract says empirical, body says empirical"
+    },
+    "direction_agreement": {
+      "status": "flag",
+      "detail": "abstract: declined | results: mixed"
+    },
+    "sample_size_consistency": {
+      "status": "pass",
+      "detail": "abstract N [18] | methods/results enrolled 22, analyzed 18 (attrition between enrolled and analyzed)"
+    }
+  }
+}

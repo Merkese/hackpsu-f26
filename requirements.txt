@@ -1,0 +1,7 @@
+google-genai
+pydantic
+requests
+python-dotenv
+psycopg[binary]
+fastapi
+uvicorn
