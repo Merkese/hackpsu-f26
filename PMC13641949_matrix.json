@@ -1,14 +1,21 @@
 {
   "pmcid": "PMC13641949",
+  "doi": null,
   "title": "Effects of one night of sleep deprivation on single- and dual-task gait",
+  "license": null,
+  "model": "gemini-3.8-flash",
+  "thinking": "low",
+  "prompt_version": "2026-10-24a",
+  "created_at": "2026-10-25T03:00:55",
+  "truncated": false,
   "abstract_extraction": {
     "paper_type": "empirical",
     "sample_size_enrolled": 18,
     "sample_size_analyzed": 18,
-    "design": "within-subject crossover trial",
-    "primary_outcome": "gait changes (spatio-temporal parameters, foot placement error, and mediolateral margin of stability)",
+    "design": "crossover study",
+    "primary_outcome": "gait parameters (spatio-temporal parameters, foot placement error, and mediolateral margin of stability)",
     "direction": "declined",
-    "direction_summary": "Declined gait stability and altered parameters following sleep deprivation compared to control.",
+    "direction_summary": "Declined: SDEP increased step time and length, altered foot placement error, and decreased mediolateral margin of stability.",
     "evidence": "Additionally, mean MoS ML decreased only in SDEP ( p = 0.025)."
   },
   "body_extraction": {
@@ -16,10 +23,10 @@
     "sample_size_enrolled": 22,
     "sample_size_analyzed": 18,
     "design": "randomized crossover trial",
-    "primary_outcome": "biomechanical gait parameters (spatio-temporal parameters, foot placement control, and mediolateral margins of stability)",
+    "primary_outcome": "biomechanical gait control measures (spatio-temporal parameters, foot placement control, and mediolateral margins of stability)",
     "direction": "declined",
-    "direction_summary": "Declined: SDEP subtly decreased mediolateral dynamic stability and altered step parameters without major disruption under dual-task conditions.",
-    "evidence": "SDEP led to a decrease in mean MoS ML (p = 0.025), indicating slightly reduced ML stability"
+    "direction_summary": "Declined stability (reduced mean MoS ML) and altered gait parameters under sleep deprivation.",
+    "evidence": "These results suggest that SDEP subtly decreases stability, whereas cognitive load reduced variability without changing the average MoS ML."
   },
   "checks": {
     "paper_type": {
@@ -33,6 +40,14 @@
     "sample_size_consistency": {
       "status": "pass",
       "detail": "abstract N [18] | methods/results enrolled 22, analyzed 18 (attrition between enrolled and analyzed)"
+    },
+    "evidence_abstract": {
+      "status": "pass",
+      "detail": "quote found verbatim in source text"
+    },
+    "evidence_body": {
+      "status": "pass",
+      "detail": "quote found verbatim in source text"
     }
   }
 }

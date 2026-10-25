@@ -23,10 +23,16 @@ SECTION_KEYWORDS = [
 SKIP_TAGS = {"table-wrap", "fig"}  # kept out of the text, counted separately
 
 
+class NoFullText(Exception):
+    """Paper has no full-text XML in Europe PMC."""
+
+
 def fetch_xml(pmcid):
     resp = requests.get(BASE.format(pmcid), timeout=30)
-    if resp.status_code == 404:
-        sys.exit(f"{pmcid}: no full-text XML (probably not in the open-access subset)")
+    # Europe PMC answers an unknown or non-open-access ID with 404 or a bare 500.
+    if resp.status_code in (404, 500):
+        raise NoFullText(f"{pmcid}: no full-text XML (probably not in the open-access "
+                         f"subset; HTTP {resp.status_code})")
     resp.raise_for_status()
     return resp.content
 
@@ -86,7 +92,10 @@ def parse_sections(xml_bytes):
 
 def main():
     pmcid = sys.argv[1] if len(sys.argv) > 1 else "PMC13641949"
-    data = parse_sections(fetch_xml(pmcid))
+    try:
+        data = parse_sections(fetch_xml(pmcid))
+    except NoFullText as e:
+        sys.exit(str(e))
 
     print(f"Title: {data['title']}\n")
     print(f"Abstract: {len(data['abstract'])} chars")
@@ -95,7 +104,7 @@ def main():
     if data["unmatched"]:
         print(f"Unmatched sections: {data['unmatched']}")
 
-    with open(f"{pmcid}_sections.json", "w") as f:
+    with open(f"{pmcid}_sections.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
     print(f"\nSaved {pmcid}_sections.json")
 

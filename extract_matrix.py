@@ -19,7 +19,7 @@ from typing import Literal, Optional
 from google import genai
 from pydantic import BaseModel, Field
 
-from fetch_sections import fetch_xml, parse_sections
+from fetch_sections import NoFullText, fetch_xml, parse_sections
 
 try:  # load GEMINI_API_KEY from a .env file next to this script, if present
     from dotenv import load_dotenv
@@ -30,6 +30,11 @@ except ImportError:
 MODEL = "gemini-3.8-flash"  # change here if your key uses a different model
 THINKING = "low"            # extraction needs little reasoning; "low" is much faster
 MAX_CHARS = 30000           # cap per call to keep requests fast and cheap
+PROMPT_VERSION = "2026-10-24a"  # bump whenever PROMPT or the schema changes
+
+
+class MissingText(Exception):
+    """Paper has no usable abstract."""
 
 Direction = Literal["improved", "declined", "no difference", "mixed", "not reported"]
 
@@ -155,6 +160,10 @@ def run_checks(abstract, body, abstract_text, body_text):
     if (body.sample_size_enrolled and body.sample_size_analyzed
             and body.sample_size_enrolled != body.sample_size_analyzed):
         detail += " (attrition between enrolled and analyzed)"
+    if (body.sample_size_enrolled and body.sample_size_analyzed
+            and body.sample_size_analyzed > body.sample_size_enrolled):
+        status = "flag"
+        detail += " (analyzed exceeds enrolled; check extraction)"
     checks["sample_size_consistency"] = {"status": status, "detail": detail}
 
     # 4-5. Evidence quotes must appear in the text each extraction came from
@@ -179,6 +188,65 @@ def build_texts(paper):
     return abstract_text, body_text, truncated
 
 
+def process_paper(pmcid, client, emit=lambda *a, **k: None, cache_dir="."):
+    """Fetch, extract, and check one paper. Returns the matrix dict and saves it.
+
+    Raises NoFullText or MissingText when the paper cannot be processed.
+    """
+    sections_path = os.path.join(cache_dir, f"{pmcid}_sections.json")
+    if os.path.exists(sections_path):
+        with open(sections_path, encoding="utf-8") as f:
+            paper = json.load(f)
+        log(f"Loaded cached {sections_path}")
+    else:
+        log(f"Downloading {pmcid} from Europe PMC...")
+        paper = parse_sections(fetch_xml(pmcid))  # may raise NoFullText
+        with open(sections_path, "w", encoding="utf-8") as f:
+            json.dump(paper, f, indent=2)
+    emit("fetched", pmcid)
+
+    if not paper["abstract"].strip():
+        raise MissingText(f"{pmcid}: no abstract")
+    abstract_text, body_text, truncated = build_texts(paper)
+
+    if body_text.strip():
+        with ThreadPoolExecutor(max_workers=2) as pool:  # run both calls at once
+            a_job = pool.submit(extract, client, paper["title"], "abstract", abstract_text)
+            b_job = pool.submit(extract, client, paper["title"],
+                                "results and methods sections", body_text)
+            abstract, body = a_job.result(), b_job.result()
+        emit("extracted", pmcid)
+        checks = run_checks(abstract, body, abstract_text, body_text)
+    else:
+        # reviews and some protocols have no methods/results sections
+        abstract = extract(client, paper["title"], "abstract", abstract_text)
+        body = None
+        emit("extracted", pmcid)
+        checks = {
+            "paper_type": {
+                "status": "pass" if abstract.paper_type == "empirical" else "flag",
+                "detail": f"abstract says {abstract.paper_type}; no methods/results sections found",
+            },
+            "direction_agreement": {"status": "unclear",
+                                    "detail": "no results section to compare"},
+            "sample_size_consistency": {"status": "unclear",
+                                        "detail": "no methods/results to compare"},
+            "evidence_abstract": verify_quote(abstract.evidence, abstract_text),
+        }
+    emit("checked", pmcid)
+
+    out = {"pmcid": pmcid, "doi": paper.get("doi"), "title": paper["title"],
+           "license": paper.get("license"), "model": MODEL, "thinking": THINKING,
+           "prompt_version": PROMPT_VERSION,
+           "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"), "truncated": truncated,
+           "abstract_extraction": abstract.model_dump(),
+           "body_extraction": body.model_dump() if body else None,
+           "checks": checks}
+    with open(os.path.join(cache_dir, f"{pmcid}_matrix.json"), "w", encoding="utf-8") as f:
+        json.dump(out, f, indent=2)
+    return out
+
+
 def main():
     pmcid = sys.argv[1] if len(sys.argv) > 1 else "PMC13641949"
     key = os.environ.get("GEMINI_API_KEY", "").strip().strip('"').strip("'")
@@ -189,41 +257,23 @@ def main():
                  "  Fix: pip install python-dotenv, or set the key in THIS terminal.")
     os.environ["GEMINI_API_KEY"] = key  # strips stray quotes from Windows `set`
 
-    cache = f"{pmcid}_sections.json"
-    if os.path.exists(cache):
-        with open(cache) as f:
-            paper = json.load(f)
-        log(f"Loaded cached {cache}")
-    else:
-        log(f"Downloading {pmcid} from Europe PMC...")
-        paper = parse_sections(fetch_xml(pmcid))
-
-    abstract_text, body_text, truncated = build_texts(paper)
-    if not paper["abstract"] or not body_text.strip():
-        sys.exit(f"{pmcid}: missing abstract or methods/results text, cannot run checks.")
-
     client = genai.Client()  # reads GEMINI_API_KEY
-    with ThreadPoolExecutor(max_workers=2) as pool:  # run both calls at once
-        a_job = pool.submit(extract, client, paper["title"], "abstract", abstract_text)
-        b_job = pool.submit(extract, client, paper["title"],
-                            "results and methods sections", body_text)
-        abstract, body = a_job.result(), b_job.result()
-    checks = run_checks(abstract, body, abstract_text, body_text)
+    try:
+        out = process_paper(pmcid, client)
+    except (NoFullText, MissingText) as e:
+        sys.exit(str(e))
 
-    print(f"{paper['title']}\n")
-    print(f"Design:    {body.design}")
-    print(f"Outcome:   {body.primary_outcome}")
-    print(f"N:         enrolled {body.sample_size_enrolled}, analyzed {body.sample_size_analyzed}")
-    print(f"Direction: {body.direction_summary}")
-    print(f"Evidence:  \"{body.evidence}\"\n")
-    for name, c in checks.items():
+    body = out["body_extraction"] or out["abstract_extraction"]
+    print(f"{out['title']}\n")
+    if out["body_extraction"] is None:
+        print("(no methods/results sections found; values come from the abstract)")
+    print(f"Design:    {body['design']}")
+    print(f"Outcome:   {body['primary_outcome']}")
+    print(f"N:         enrolled {body['sample_size_enrolled']}, analyzed {body['sample_size_analyzed']}")
+    print(f"Direction: {body['direction_summary']}")
+    print(f"Evidence:  \"{body['evidence']}\"\n")
+    for name, c in out["checks"].items():
         print(f"[{c['status'].upper():7}] {name}: {c['detail']}")
-
-    out = {"pmcid": pmcid, "title": paper["title"], "truncated": truncated,
-           "abstract_extraction": abstract.model_dump(),
-           "body_extraction": body.model_dump(), "checks": checks}
-    with open(f"{pmcid}_matrix.json", "w") as f:
-        json.dump(out, f, indent=2)
     print(f"\nSaved {pmcid}_matrix.json")
 
 
