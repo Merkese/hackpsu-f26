@@ -1,2 +1,7 @@
 .env
 /.venv
+.venv/
+__pycache__/
+*.pyc
+*_sections.json
+/mds

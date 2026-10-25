@@ -8,7 +8,7 @@
     "design": "within-subject crossover trial",
     "primary_outcome": "gait changes (spatio-temporal parameters, foot placement error, and mediolateral margin of stability)",
     "direction": "declined",
-    "direction_summary": "Declined: sleep deprivation altered gait parameters and decreased mediolateral margin of stability, indicating impaired walking stability/control.",
+    "direction_summary": "Declined gait stability and altered parameters following sleep deprivation compared to control.",
     "evidence": "Additionally, mean MoS ML decreased only in SDEP ( p = 0.025)."
   },
   "body_extraction": {
@@ -17,9 +17,9 @@
     "sample_size_analyzed": 18,
     "design": "randomized crossover trial",
     "primary_outcome": "biomechanical gait parameters (spatio-temporal parameters, foot placement control, and mediolateral margins of stability)",
-    "direction": "mixed",
-    "direction_summary": "Mixed gait changes following sleep deprivation: step time and step length increased, mediolateral stability decreased, and foot placement error AP decreased, while other parameters showed no effect.",
-    "evidence": "SDEP and DT uniquely affected ML and AP foot placement control... SDEP led to a decrease in mean MoS ML"
+    "direction": "declined",
+    "direction_summary": "Declined: SDEP subtly decreased mediolateral dynamic stability and altered step parameters without major disruption under dual-task conditions.",
+    "evidence": "SDEP led to a decrease in mean MoS ML (p = 0.025), indicating slightly reduced ML stability"
   },
   "checks": {
     "paper_type": {
@@ -27,8 +27,8 @@
       "detail": "abstract says empirical, body says empirical"
     },
     "direction_agreement": {
-      "status": "flag",
-      "detail": "abstract: declined | results: mixed"
+      "status": "pass",
+      "detail": "abstract: declined | results: declined"
     },
     "sample_size_consistency": {
       "status": "pass",
