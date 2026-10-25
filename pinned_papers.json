@@ -1,0 +1,35 @@
+{
+  "papers": [
+    {
+      "pmcid": "PMC13641949",
+      "note": "sleep deprivation and gait, crossover",
+      "expected": {
+        "design_contains": "crossover",
+        "enrolled": 22,
+        "analyzed": 18,
+        "direction_in": ["declined", "mixed"]
+      }
+    },
+    {
+      "pmcid": "PMC13670936",
+      "note": "resiLIR HCP resilience RCT. The results text never states an analyzed N for the primary (ITT) analysis: it gives 234 randomized and 45 in the per-protocol sample, and the flow chart is an image. So null is the honest answer; 234 is also accepted. 45 (the PP sample) is not.",
+      "expected": {
+        "design_contains": "random",
+        "enrolled": 234,
+        "analyzed_in": [null, 234],
+        "direction_in": ["no difference"]
+      }
+    },
+    {
+      "pmcid": "PMC13640143",
+      "note": "sleep protocol, should be caught by the paper-type flag (a prediction until it has been run)",
+      "expected": {
+        "paper_type": "protocol"
+      }
+    }
+  ],
+  "screening_labels": {
+    "question": "",
+    "labels": {}
+  }
+}
