@@ -94,7 +94,11 @@ def _norm(s):
     s = (s.replace("“", '"').replace("”", '"')
           .replace("‘", "'").replace("’", "'")
           .replace("–", "-").replace("—", "-"))
-    return re.sub(r"\s+", " ", s).strip().lower()
+    s = re.sub(r"\s+", " ", s).strip().lower()
+    # The XML-to-text step leaves stray spaces inside brackets and before punctuation
+    # ("( p = 0.025 )"). Applied to both quote and source so neither side mismatches.
+    s = re.sub(r"([(\[{])\s+", r"\1", s)
+    return re.sub(r"\s+([)\]},.;:%])", r"\1", s)
 
 
 def verify_quote(quote, text):
