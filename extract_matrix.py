@@ -72,11 +72,11 @@ def log(msg):
 
 
 def extract(client, title, source, text):
-    log(f"Calling Gemini on {source} ({min(len(text), MAX_CHARS):,} chars)...")
+    log(f"Calling Gemini on {source} ({len(text):,} chars)...")
     start = time.time()
     interaction = client.interactions.create(
         model=MODEL,
-        input=PROMPT.format(title=title, source=source, text=text[:MAX_CHARS]),
+        input=PROMPT.format(title=title, source=source, text=text),
         generation_config={"thinking_level": THINKING},
         response_format={
             "type": "text",
@@ -132,6 +132,21 @@ def run_checks(abstract, body):
     return checks
 
 
+def build_texts(paper):
+    """Results first, then methods up to the remaining budget, truncated once.
+
+    Returns (abstract_text, body_text, truncated). The texts returned here are
+    exactly what is sent to Gemini, so quote checks run against the same text.
+    """
+    secs = paper["sections"]
+    results = secs.get("results", {}).get("text", "")
+    methods = secs.get("methods", {}).get("text", "")
+    body_text = (results + " " + methods[: max(0, MAX_CHARS - len(results) - 1)]).strip()[:MAX_CHARS]
+    abstract_text = paper["abstract"][:MAX_CHARS]
+    truncated = len(results) + len(methods) + 1 > MAX_CHARS
+    return abstract_text, body_text, truncated
+
+
 def main():
     pmcid = sys.argv[1] if len(sys.argv) > 1 else "PMC13641949"
     key = os.environ.get("GEMINI_API_KEY", "").strip().strip('"').strip("'")
@@ -151,16 +166,15 @@ def main():
         log(f"Downloading {pmcid} from Europe PMC...")
         paper = parse_sections(fetch_xml(pmcid))
 
-    secs = paper["sections"]
-    body_text = " ".join(secs.get(name, {}).get("text", "") for name in ("methods", "results"))
+    abstract_text, body_text, truncated = build_texts(paper)
     if not paper["abstract"] or not body_text.strip():
         sys.exit(f"{pmcid}: missing abstract or methods/results text, cannot run checks.")
 
     client = genai.Client()  # reads GEMINI_API_KEY
     with ThreadPoolExecutor(max_workers=2) as pool:  # run both calls at once
-        a_job = pool.submit(extract, client, paper["title"], "abstract", paper["abstract"])
+        a_job = pool.submit(extract, client, paper["title"], "abstract", abstract_text)
         b_job = pool.submit(extract, client, paper["title"],
-                            "methods and results sections", body_text)
+                            "results and methods sections", body_text)
         abstract, body = a_job.result(), b_job.result()
     checks = run_checks(abstract, body)
 
@@ -173,7 +187,7 @@ def main():
     for name, c in checks.items():
         print(f"[{c['status'].upper():7}] {name}: {c['detail']}")
 
-    out = {"pmcid": pmcid, "title": paper["title"],
+    out = {"pmcid": pmcid, "title": paper["title"], "truncated": truncated,
            "abstract_extraction": abstract.model_dump(),
            "body_extraction": body.model_dump(), "checks": checks}
     with open(f"{pmcid}_matrix.json", "w") as f:
