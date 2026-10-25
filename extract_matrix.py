@@ -9,9 +9,11 @@ Needs fetch_sections.py in the same folder.
 """
 import json
 import os
+import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
+from difflib import SequenceMatcher
 from typing import Literal, Optional
 
 from google import genai
@@ -88,7 +90,29 @@ def extract(client, title, source, text):
     return Extraction.model_validate_json(interaction.output_text)
 
 
-def run_checks(abstract, body):
+def _norm(s):
+    s = (s.replace("“", '"').replace("”", '"')
+          .replace("‘", "'").replace("’", "'")
+          .replace("–", "-").replace("—", "-"))
+    return re.sub(r"\s+", " ", s).strip().lower()
+
+
+def verify_quote(quote, text):
+    """Check that an extracted quote literally appears in the text it came from."""
+    q = _norm(quote).strip("\"' .")
+    t = _norm(text)
+    if not q:
+        return {"status": "unclear", "detail": "no evidence quote returned"}
+    if q in t:
+        return {"status": "pass", "detail": "quote found verbatim in source text"}
+    m = SequenceMatcher(None, q, t, autojunk=False).find_longest_match(0, len(q), 0, len(t))
+    share = m.size / len(q)
+    if share >= 0.9:
+        return {"status": "pass", "detail": f"near match ({share:.0%} of quote found verbatim)"}
+    return {"status": "flag", "detail": f"quote not found in source text (best match {share:.0%})"}
+
+
+def run_checks(abstract, body, abstract_text, body_text):
     """Compare the abstract extraction against the methods+results extraction."""
     checks = {}
 
@@ -128,6 +152,10 @@ def run_checks(abstract, body):
             and body.sample_size_enrolled != body.sample_size_analyzed):
         detail += " (attrition between enrolled and analyzed)"
     checks["sample_size_consistency"] = {"status": status, "detail": detail}
+
+    # 4-5. Evidence quotes must appear in the text each extraction came from
+    checks["evidence_abstract"] = verify_quote(abstract.evidence, abstract_text)
+    checks["evidence_body"] = verify_quote(body.evidence, body_text)
 
     return checks
 
@@ -176,7 +204,7 @@ def main():
         b_job = pool.submit(extract, client, paper["title"],
                             "results and methods sections", body_text)
         abstract, body = a_job.result(), b_job.result()
-    checks = run_checks(abstract, body)
+    checks = run_checks(abstract, body, abstract_text, body_text)
 
     print(f"{paper['title']}\n")
     print(f"Design:    {body.design}")
